@@ -21,9 +21,3 @@ def apply_transformation(
             print(f"Error: Transformation function not found: {activity}")
             return input_data
     return activity_fn(input_data, transformation_params)
-    return input_data
-    # return activity_fn(input_data, transformation_params)
-
-
-if __name__ == "__main__":
-    print(getattr(Transformation, "JSON", None))
