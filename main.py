@@ -6,7 +6,10 @@ from dotenv import load_dotenv
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from temporal_worker.activities.initial import fetch_pipeline_config
+from temporal_worker.activities.initial import (
+    fetch_pipeline_config,
+    fetch_workflow_config,
+)
 from temporal_worker.activities.transformations import end, filters, transform
 from temporal_worker.workflows import MainWorkflow, TransformationWorkflow
 
@@ -49,7 +52,7 @@ def parse_arguments():
 workers = {
     "main": {
         "workflows": [MainWorkflow],
-        "activities": [fetch_pipeline_config],
+        "activities": [fetch_pipeline_config, fetch_workflow_config],
     },
     "transformation": {
         "workflows": [TransformationWorkflow],
