@@ -6,12 +6,12 @@ from dotenv import load_dotenv
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from temporal_worker.activities.initial import (
-    fetch_pipeline_config,
-    fetch_workflow_config,
-)
-from temporal_worker.activities.transformations import end, filters, transform
-from temporal_worker.workflows import MainWorkflow, TransformationWorkflow
+# from temporal_worker.activities.initial import (
+#     fetch_pipeline_config,
+#     fetch_workflow_config,
+# )
+# from temporal_worker.activities.transformations import end, filters, transform
+# from temporal_worker.workflows import MainWorkflow, TransformationWorkflow
 
 load_dotenv()
 
@@ -24,7 +24,7 @@ def parse_arguments():
         "--worker-type",
         type=str,
         default=os.environ.get("WORKER_TYPE", "main"),
-        choices=["main", "transformation"],
+        choices=["main", "transformation", "destination"],
         help="Type of worker to start (default: main)",
     )
 
@@ -49,16 +49,16 @@ def parse_arguments():
     return parser.parse_args()
 
 
-workers = {
-    "main": {
-        "workflows": [MainWorkflow],
-        "activities": [fetch_pipeline_config, fetch_workflow_config],
-    },
-    "transformation": {
-        "workflows": [TransformationWorkflow],
-        "activities": [end, filters, transform],
-    },
-}
+# workers = {
+#     "main": {
+#         "workflows": [MainWorkflow],
+#         "activities": [fetch_pipeline_config, fetch_workflow_config],
+#     },
+#     "transformation": {
+#         "workflows": [TransformationWorkflow],
+#         "activities": [end, filters, transform],
+#     },
+# }
 
 
 async def main():
@@ -71,8 +71,48 @@ async def main():
         print(f"  Task Queue: {args.task_queue}")
         print(f"  Temporal Host: {args.temporal_host}")
 
-    if args.worker_type not in workers:
-        raise ValueError(f"Unknown worker type: {args.worker_type}")
+    workflows = activities = []
+
+    if args.worker_type == "main":
+        from temporal_workers.main_worker.activities import (
+            fetch_pipeline_config,
+            fetch_workflow_config,
+        )
+        from temporal_workers.main_worker.workflow import MainWorkflow
+
+        workflows = [MainWorkflow]
+        activities = [fetch_pipeline_config, fetch_workflow_config]
+
+    elif args.worker_type == "transformation":
+        from temporal_workers.transformation_worker.activities import (
+            end,
+            filters,
+            transform,
+        )
+        from temporal_workers.transformation_worker.workflow import (
+            TransformationWorkflow,
+        )
+
+        workflows = [TransformationWorkflow]
+        activities = [filters, transform, end]
+
+    elif args.worker_type == "destination":
+        from temporal_workers.destination_worker.activities import (
+            fetch_integration_connector,
+            fetch_integration_target,
+            send_to_destination,
+        )
+        from temporal_workers.destination_worker.workflow import DestinationWorkflow
+
+        workflows = [DestinationWorkflow]
+        activities = [
+            fetch_integration_target,
+            fetch_integration_connector,
+            send_to_destination,
+        ]
+
+    else:
+        raise ValueError(f"Worker type not supported: {args.worker_type}")
 
     # Connect to Temporal server
     client = await Client.connect(args.temporal_host)
@@ -81,10 +121,8 @@ async def main():
     worker = Worker(
         client,
         task_queue=args.task_queue,  # Task queue name
-        workflows=workers[args.worker_type]["workflows"],  # Optional: workflows
-        activities=workers[args.worker_type][
-            "activities"
-        ],  # Activities this worker will handle
+        workflows=workflows,  # Optional: workflows
+        activities=activities,  # Activities this worker will handle
     )
 
     print(

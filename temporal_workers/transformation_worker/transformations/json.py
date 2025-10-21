@@ -1,6 +1,6 @@
 import copy
 
-from ..general import PipelineUtils
+from ..utils import _is_keychain_str, get_keychain_from_str
 
 
 class JSONTransformation:
@@ -9,8 +9,8 @@ class JSONTransformation:
         key = transformation_params.get("key")
         data_copy = copy.deepcopy(data)
 
-        if PipelineUtils._is_keychain_str(key):
-            keys = PipelineUtils.get_keychain_from_str(key)
+        if _is_keychain_str(key):
+            keys = get_keychain_from_str(key)
             # Navigate to the parent of the key to be deleted
             current = data_copy
             for k in keys[:-1]:  # All keys except the last one
@@ -36,8 +36,8 @@ class JSONTransformation:
         key = transformation_params.get("key")
         value = transformation_params.get("value")
 
-        if PipelineUtils._is_keychain_str(key):
-            keys = PipelineUtils.get_keychain_from_str(key)
+        if _is_keychain_str(key):
+            keys = get_keychain_from_str(key)
             current = data
             for k in keys[:-1]:
                 if k not in current or type(current[k]) is not dict:

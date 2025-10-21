@@ -2,8 +2,8 @@ import copy
 
 from temporalio import activity
 
-from ..utils.rule_engine import RuleEngine
-from ..utils.transformations import apply_transformation
+from .rule_engine import RuleEngine
+from .transformations import apply_transformation
 
 
 @activity.defn
@@ -31,7 +31,7 @@ async def filters(node_config, input_data):
                     next.append(nd)
         else:
             # Evaluate specific filter conditions
-            filter_condition = filter_config.get("filter")
+            filter_condition = filter_config["filter"]
             if filter_condition and RuleEngine(input_data).evaluate_filter(
                 filter_condition
             ):

@@ -1,6 +1,6 @@
 from temporalio import activity
 
-from ..utils.dal.pipeline import get_pipeline, get_workflow_config
+from .dal import get_pipeline, get_workflow_config
 
 
 @activity.defn

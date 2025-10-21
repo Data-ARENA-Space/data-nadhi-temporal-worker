@@ -1,7 +1,7 @@
 import copy
 from typing import Any
 
-from .general import PipelineUtils
+from .utils import _is_keychain_str, get_keychain_from_str
 
 
 class RuleEngine:
@@ -10,8 +10,8 @@ class RuleEngine:
 
     def get_value_from_data(self, key: str) -> Any:
         """Extract value from data using keychain or direct key"""
-        if PipelineUtils._is_keychain_str(key):
-            keys = PipelineUtils.get_keychain_from_str(key)
+        if _is_keychain_str(key):
+            keys = get_keychain_from_str(key)
             current = copy.deepcopy(self.data)
             for k in keys:
                 if isinstance(current, dict) and k in current:
@@ -31,7 +31,7 @@ class RuleEngine:
         key_value = self.get_value_from_data(key)
 
         # Handle value - it could be a keychain reference or literal value
-        if value and isinstance(value, str) and PipelineUtils._is_keychain_str(value):
+        if value and isinstance(value, str) and _is_keychain_str(value):
             compare_value = self.get_value_from_data(value)
         else:
             compare_value = value

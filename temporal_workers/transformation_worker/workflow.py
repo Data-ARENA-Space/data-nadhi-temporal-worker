@@ -3,24 +3,18 @@ from datetime import timedelta
 
 from temporalio import workflow
 
-from ..activities.transformations import end, filters, transform
-
 
 @workflow.defn
 class TransformationWorkflow:
     def __init__(self):
         self.queue = []
-        self.type_to_function = {
-            "transformation": transform,
-            "condition-branching": filters,
-            "end": end,
-        }
         self.node_outputs = {}
 
     @workflow.run
     async def traverse_workflow(
-        self, pipeline_config: dict, log_data: dict, start_node_id: str
+        self, pipeline_config: dict, log_data: dict, start_node_id: str, metadata: dict
     ) -> dict:
+        info = workflow.info()
         if start_node_id not in pipeline_config:
             print(start_node_id, pipeline_config)
             return {"error": "Start node not found in pipeline config"}
@@ -35,6 +29,7 @@ class TransformationWorkflow:
 
             node_type = current_node_config.get("type")
 
+            next_nodes, final_data = [], current_data
             if node_type == "transformation":
                 next_nodes, final_data = await workflow.execute_activity(
                     "transform",
@@ -48,13 +43,12 @@ class TransformationWorkflow:
                     schedule_to_close_timeout=timedelta(minutes=5),
                 )
             elif node_type == "end":
-                next_nodes, final_data = await workflow.execute_activity(
-                    "end",
-                    args=(current_node_config, current_data),
-                    schedule_to_close_timeout=timedelta(minutes=5),
+                final_data = await workflow.execute_child_workflow(
+                    "DestinationWorkflow",
+                    args=(current_data, current_node_config["target_id"], metadata),
+                    task_queue=info.task_queue.replace("-transform", "-destination"),
+                    id=info.workflow_id.replace("-transform", "-destination"),
                 )
-            else:
-                next_nodes, final_data = [], current_data
 
             for nd in next_nodes:
                 self.queue.append({"node_id": nd, "data": final_data})

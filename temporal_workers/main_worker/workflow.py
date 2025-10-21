@@ -2,8 +2,6 @@ from datetime import timedelta
 
 from temporalio import workflow
 
-from .transformation import TransformationWorkflow
-
 
 @workflow.defn
 class MainWorkflow:
@@ -51,8 +49,8 @@ class MainWorkflow:
         print("TRIGGERING TASK Q:", info.task_queue + "-transform", info.workflow_id)
 
         return await workflow.execute_child_workflow(
-            TransformationWorkflow,
-            args=(workflow_config, log_data, start_node_id),
+            "TransformationWorkflow",
+            args=(workflow_config, log_data, start_node_id, metadata),
             task_queue=info.task_queue + "-transform",
             id=info.workflow_id + "-transform",
         )

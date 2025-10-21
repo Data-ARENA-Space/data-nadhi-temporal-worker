@@ -1,7 +1,7 @@
 import json
 
-from ..db.mongo import MongoService
-from ..db.redis import RedisService
+from utils.db.mongo import MongoService
+from utils.db.redis import RedisService
 
 
 def get_workflow_config(org_id: str, project_id: str, pipeline_id: str):
