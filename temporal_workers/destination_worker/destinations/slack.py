@@ -45,3 +45,4 @@ class SlackDestination(Destination):
             message = self.get_template_message()
 
         client.chat_postMessage(channel=channel, text=message)
+        {"success": "True", "message_sent": message}

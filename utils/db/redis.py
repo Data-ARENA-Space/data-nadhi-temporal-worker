@@ -1,13 +1,11 @@
-import logging
 import os
 
 import redis
 from dotenv import load_dotenv
 
-load_dotenv()
+from utils.logger import log_debug, log_warn
 
-logger = logging.getLogger("RedisService")
-logging.basicConfig(level=logging.INFO)
+load_dotenv()
 
 
 class RedisService:
@@ -37,10 +35,10 @@ class RedisService:
             self.client = redis.Redis.from_url(self.redis_url, decode_responses=True)
             self.client.ping()
             self.connected = True
-            logger.info("Connected to Redis")
+            log_debug("Connected to Redis", None, {"component": "RedisService"})
         except redis.RedisError as e:
             self.connected = False
-            logger.error(f"Redis connection failed: {e}")
+            log_warn("Redis connection failed", None, {"component": "RedisService", "error": str(e)})
 
     def is_connected(self) -> bool:
         if not self.client:
@@ -53,7 +51,7 @@ class RedisService:
 
     def ensure_connection(self):
         if not self.is_connected():
-            logger.warning("Redis connection lost. Reconnecting...")
+            log_warn("Redis connection lost, reconnecting", None, {"component": "RedisService"})
             self.connect()
 
     def safe_get(self, key: str):
@@ -63,7 +61,7 @@ class RedisService:
                 return None
             return self.client.get(key)
         except Exception as e:
-            logger.warning(f"Redis get failed: {e}")
+            log_warn("Redis get failed", None, {"component": "RedisService", "error": str(e)})
             return None
 
     def safe_set(self, key: str, value, ex: int = None):
@@ -73,4 +71,4 @@ class RedisService:
                 return
             self.client.set(key, value, ex=ex)
         except Exception as e:
-            logger.warning(f"Redis set failed: {e}")
+            log_warn("Redis set failed", None, {"component": "RedisService", "error": str(e)})

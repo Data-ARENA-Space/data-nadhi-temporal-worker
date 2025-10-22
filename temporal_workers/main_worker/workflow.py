@@ -1,6 +1,10 @@
 from datetime import timedelta
 
 from temporalio import workflow
+from temporalio.exceptions import ActivityError, ApplicationError
+
+from utils.retry_policies import get_default_retry_policy
+from utils.workflow_utils import extract_exception_details
 
 
 @workflow.defn
@@ -15,42 +19,80 @@ class MainWorkflow:
         org_id = metadata.get("organisationId")
         project_id = metadata.get("projectId")
         pipeline_id = metadata.get("pipelineId")
+        message_id = metadata.get("messageId")
+
+        # Build context for logging in activities
+        ctx = {
+            "organisationId": org_id,
+            "projectId": project_id,
+            "pipelineId": pipeline_id,
+            "messageId": message_id,
+            "logData": log_data,
+            "originalInput": log_data,
+        }
 
         if not (org_id and project_id and pipeline_id):
             return {
-                "successs": False,
+                "success": False,
                 "reason": "organisationId, projectId and pipelineId required",
                 "context": {"metadata": metadata},
-                "log_data": log_data,
             }
-        pipeline_config = await workflow.execute_activity(
-            "fetch_pipeline_config",
-            args=(org_id, project_id, pipeline_id),
-            schedule_to_close_timeout=timedelta(minutes=5),
-        )
+
+        try:
+            pipeline_config = await workflow.execute_activity(
+                "fetch_pipeline_config",
+                args=(org_id, project_id, pipeline_id, ctx),
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=get_default_retry_policy(),
+            )
+        except (ApplicationError, ActivityError) as exc:
+            # Log failure and return error response
+            exc_type, exc_message, exc_stack = extract_exception_details(exc)
+            return await workflow.execute_activity(
+                "log_failure",
+                args=(exc_type, exc_message, exc_stack, exc_message, ctx, None, None),
+                schedule_to_close_timeout=timedelta(minutes=2),
+            )
+
+        if isinstance(pipeline_config, dict) and not pipeline_config.get(
+            "success", True
+        ):
+            return pipeline_config
 
         if not pipeline_config or "startNodeId" not in pipeline_config:
             return {
                 "success": False,
                 "reason": "Start Node Id not found",
-                "context": {"metadata": metadata, "pipeline_config": pipeline_config},
-                "log_data": log_data,
+                "context": {"pipeline_config": pipeline_config},
             }
 
-        workflow_config = await workflow.execute_activity(
-            "fetch_workflow_config",
-            args=(org_id, project_id, pipeline_id),
-            schedule_to_close_timeout=timedelta(minutes=5),
-        )
+        try:
+            workflow_config = await workflow.execute_activity(
+                "fetch_workflow_config",
+                args=(org_id, project_id, pipeline_id, ctx),
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=get_default_retry_policy(),
+            )
+        except (ApplicationError, ActivityError) as exc:
+            # Log failure and return error response
+            exc_type, exc_message, exc_stack = extract_exception_details(exc)
+            return await workflow.execute_activity(
+                "log_failure",
+                args=(exc_type, exc_message, exc_stack, exc_message, ctx, None, None),
+                schedule_to_close_timeout=timedelta(minutes=2),
+            )
+
+        if isinstance(workflow_config, dict) and not workflow_config.get(
+            "success", True
+        ):
+            return workflow_config
 
         start_node_id = pipeline_config["startNodeId"]
         self.node_outputs = {"input": log_data}
 
-        print("TRIGGERING TASK Q:", info.task_queue + "-transform", info.workflow_id)
-
         return await workflow.execute_child_workflow(
             "TransformationWorkflow",
-            args=(workflow_config, log_data, start_node_id, metadata),
+            args=(workflow_config, log_data, start_node_id, ctx),
             task_queue=info.task_queue + "-transform",
             id=info.workflow_id + "-transform",
         )

@@ -3,7 +3,7 @@ import importlib
 
 class DestinationRegistry:
     _registry = {
-        "slack-bot": "temporal_workers.destination_worker.destinations.slack.SlackDestination",
+        "slack": "temporal_workers.destination_worker.destinations.slack.SlackDestination",
     }
 
     @classmethod

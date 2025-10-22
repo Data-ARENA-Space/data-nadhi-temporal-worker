@@ -1,13 +1,11 @@
-import logging
 import os
 
 from dotenv import load_dotenv
 from pymongo import MongoClient, errors
 
-load_dotenv()
+from utils.logger import log_debug, log_error, log_warn
 
-logger = logging.getLogger("MongoService")
-logging.basicConfig(level=logging.INFO)
+load_dotenv()
 
 
 class MongoService:
@@ -45,11 +43,11 @@ class MongoService:
     def ensure_connection(self):
         """Reconnect if ping fails."""
         if not self.is_connected():
-            logger.warning("Mongo connection lost. Reconnecting...")
+            log_warn("Mongo connection lost, reconnecting", None, {"component": "MongoService"})
             try:
                 self.connect()
             except Exception as e:
-                logger.error(f"Reconnect failed: {e}")
+                log_error("Reconnect failed", None, {"component": "MongoService", "error": str(e)})
                 raise
 
     def connect(self):
@@ -64,22 +62,22 @@ class MongoService:
             )
             self.client.admin.command("ping")
             self.connected = True
-            logger.info("Connected to MongoDB")
+            log_debug("Connected to MongoDB", None, {"component": "MongoService"})
         except errors.PyMongoError as e:
             self.connected = False
-            logger.error(f"MongoDB connection failed: {e}")
+            log_error("MongoDB connection failed", None, {"component": "MongoService", "error": str(e)})
             raise
 
     def reconnect_once(self):
         """Try reconnecting once if disconnected."""
         if self.connected:
             return True
-        logger.warning("MongoDB client not connected. Retrying once...")
+        log_warn("MongoDB client not connected, retrying once", None, {"component": "MongoService"})
         try:
             self.connect()
             return True
         except Exception as e:
-            logger.error(f"MongoDB reconnect failed: {e}")
+            log_error("MongoDB reconnect failed", None, {"component": "MongoService", "error": str(e)})
             self.connected = False
             return False
 

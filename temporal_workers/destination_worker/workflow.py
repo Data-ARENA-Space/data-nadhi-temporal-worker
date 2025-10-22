@@ -2,50 +2,78 @@ from datetime import timedelta
 from typing import Any
 
 from temporalio import workflow
+from temporalio.exceptions import ActivityError, ApplicationError
+
+from utils.retry_policies import get_default_retry_policy
+from utils.workflow_utils import extract_exception_details
 
 
 @workflow.defn
 class DestinationWorkflow:
     @workflow.run
-    async def run(self, input: Any, target_id: str, metadata: dict):
-        org_id = metadata.get("organisationId")
-        project_id = metadata.get("projectId")
-        pipeline_id = metadata.get("pipelineId")
+    async def run(self, input: Any, target_id: str, ctx: dict):
+        org_id = ctx.get("organisationId")
+        project_id = ctx.get("projectId")
+        pipeline_id = ctx.get("pipelineId")
 
         if not (org_id and project_id and pipeline_id):
             return {
-                "successs": False,
+                "success": False,
                 "reason": "organisationId, projectId and pipelineId required",
-                "context": {"metadata": metadata},
-                "log_data": input,
             }
 
-        target = await workflow.execute_activity(
-            "fetch_integration_target",
-            args=(org_id, project_id, pipeline_id, target_id),
-            schedule_to_close_timeout=timedelta(minutes=5),
-        )
+        try:
+            target = await workflow.execute_activity(
+                "fetch_integration_target",
+                args=(org_id, project_id, pipeline_id, target_id, ctx),
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=get_default_retry_policy(),
+            )
+        except (ApplicationError, ActivityError) as exc:
+            # Log failure and return error response
+            exc_type, exc_message, exc_stack = extract_exception_details(exc)
+            return await workflow.execute_activity(
+                "log_failure",
+                args=(exc_type, exc_message, exc_stack, exc_message, ctx, input, None),
+                schedule_to_close_timeout=timedelta(minutes=2),
+            )
 
         if not target or "connectorId" not in target:
             return {
                 "success": False,
                 "reason": "Required Target info not found",
-                "context": {"metadata": metadata, "pipeline_config": target},
-                "log_data": input,
             }
 
-        connector = await workflow.execute_activity(
-            "fetch_integration_connector",
-            args=(org_id, project_id, target["connectorId"]),
-            schedule_to_close_timeout=timedelta(minutes=5),
-        )
+        try:
+            connector = await workflow.execute_activity(
+                "fetch_integration_connector",
+                args=(org_id, project_id, target["connectorId"], ctx),
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=get_default_retry_policy(),
+            )
+        except (ApplicationError, ActivityError) as exc:
+            # Log failure and return error response
+            exc_type, exc_message, exc_stack = extract_exception_details(exc)
+            return await workflow.execute_activity(
+                "log_failure",
+                args=(exc_type, exc_message, exc_stack, exc_message, ctx, input, None),
+                schedule_to_close_timeout=timedelta(minutes=2),
+            )
 
-        execution = await workflow.execute_activity(
-            "send_to_destination",
-            args=(input, target, connector),
-            schedule_to_close_timeout=timedelta(minutes=5),
-        )
+        try:
+            execution = await workflow.execute_activity(
+                "send_to_destination",
+                args=(input, target, connector, ctx),
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=get_default_retry_policy(),
+            )
+        except (ApplicationError, ActivityError) as exc:
+            # Log failure and return error response
+            exc_type, exc_message, exc_stack = extract_exception_details(exc)
+            return await workflow.execute_activity(
+                "log_failure",
+                args=(exc_type, exc_message, exc_stack, exc_message, ctx, input, None),
+                schedule_to_close_timeout=timedelta(minutes=2),
+            )
 
-        print("EXECUTION DONE: ", execution)
-
-        return {"success": True}
+        return {"success": True, "execution": execution}

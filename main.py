@@ -6,12 +6,7 @@ from dotenv import load_dotenv
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-# from temporal_worker.activities.initial import (
-#     fetch_pipeline_config,
-#     fetch_workflow_config,
-# )
-# from temporal_worker.activities.transformations import end, filters, transform
-# from temporal_worker.workflows import MainWorkflow, TransformationWorkflow
+from utils.failure_logger import log_failure
 
 load_dotenv()
 
@@ -49,18 +44,6 @@ def parse_arguments():
     return parser.parse_args()
 
 
-# workers = {
-#     "main": {
-#         "workflows": [MainWorkflow],
-#         "activities": [fetch_pipeline_config, fetch_workflow_config],
-#     },
-#     "transformation": {
-#         "workflows": [TransformationWorkflow],
-#         "activities": [end, filters, transform],
-#     },
-# }
-
-
 async def main():
     # Parse command-line arguments
     args = parse_arguments()
@@ -81,20 +64,16 @@ async def main():
         from temporal_workers.main_worker.workflow import MainWorkflow
 
         workflows = [MainWorkflow]
-        activities = [fetch_pipeline_config, fetch_workflow_config]
+        activities = [fetch_pipeline_config, fetch_workflow_config, log_failure]
 
     elif args.worker_type == "transformation":
-        from temporal_workers.transformation_worker.activities import (
-            end,
-            filters,
-            transform,
-        )
+        from temporal_workers.transformation_worker.activities import filters, transform
         from temporal_workers.transformation_worker.workflow import (
             TransformationWorkflow,
         )
 
         workflows = [TransformationWorkflow]
-        activities = [filters, transform, end]
+        activities = [filters, transform, log_failure]
 
     elif args.worker_type == "destination":
         from temporal_workers.destination_worker.activities import (
@@ -109,6 +88,7 @@ async def main():
             fetch_integration_target,
             fetch_integration_connector,
             send_to_destination,
+            log_failure,
         ]
 
     else:
