@@ -54,11 +54,6 @@ class MainWorkflow:
                 schedule_to_close_timeout=timedelta(minutes=2),
             )
 
-        if isinstance(pipeline_config, dict) and not pipeline_config.get(
-            "success", True
-        ):
-            return pipeline_config
-
         if not pipeline_config or "startNodeId" not in pipeline_config:
             return {
                 "success": False,
@@ -81,11 +76,6 @@ class MainWorkflow:
                 args=(exc_type, exc_message, exc_stack, exc_message, ctx, None, None),
                 schedule_to_close_timeout=timedelta(minutes=2),
             )
-
-        if isinstance(workflow_config, dict) and not workflow_config.get(
-            "success", True
-        ):
-            return workflow_config
 
         start_node_id = pipeline_config["startNodeId"]
         self.node_outputs = {"input": log_data}
