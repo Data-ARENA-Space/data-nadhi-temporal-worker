@@ -43,11 +43,19 @@ class MongoService:
     def ensure_connection(self):
         """Reconnect if ping fails."""
         if not self.is_connected():
-            log_warn("Mongo connection lost, reconnecting", None, {"component": "MongoService"})
+            log_warn(
+                "Mongo connection lost, reconnecting",
+                None,
+                {"component": "MongoService"},
+            )
             try:
                 self.connect()
             except Exception as e:
-                log_error("Reconnect failed", None, {"component": "MongoService", "error": str(e)})
+                log_error(
+                    "Reconnect failed",
+                    None,
+                    {"component": "MongoService", "error": str(e)},
+                )
                 raise
 
     def connect(self):
@@ -65,19 +73,31 @@ class MongoService:
             log_debug("Connected to MongoDB", None, {"component": "MongoService"})
         except errors.PyMongoError as e:
             self.connected = False
-            log_error("MongoDB connection failed", None, {"component": "MongoService", "error": str(e)})
+            log_error(
+                "MongoDB connection failed",
+                None,
+                {"component": "MongoService", "error": str(e)},
+            )
             raise
 
     def reconnect_once(self):
         """Try reconnecting once if disconnected."""
         if self.connected:
             return True
-        log_warn("MongoDB client not connected, retrying once", None, {"component": "MongoService"})
+        log_warn(
+            "MongoDB client not connected, retrying once",
+            None,
+            {"component": "MongoService"},
+        )
         try:
             self.connect()
             return True
         except Exception as e:
-            log_error("MongoDB reconnect failed", None, {"component": "MongoService", "error": str(e)})
+            log_error(
+                "MongoDB reconnect failed",
+                None,
+                {"component": "MongoService", "error": str(e)},
+            )
             self.connected = False
             return False
 

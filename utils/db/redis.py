@@ -38,7 +38,11 @@ class RedisService:
             log_debug("Connected to Redis", None, {"component": "RedisService"})
         except redis.RedisError as e:
             self.connected = False
-            log_warn("Redis connection failed", None, {"component": "RedisService", "error": str(e)})
+            log_warn(
+                "Redis connection failed",
+                None,
+                {"component": "RedisService", "error": str(e)},
+            )
 
     def is_connected(self) -> bool:
         if not self.client:
@@ -51,7 +55,11 @@ class RedisService:
 
     def ensure_connection(self):
         if not self.is_connected():
-            log_warn("Redis connection lost, reconnecting", None, {"component": "RedisService"})
+            log_warn(
+                "Redis connection lost, reconnecting",
+                None,
+                {"component": "RedisService"},
+            )
             self.connect()
 
     def safe_get(self, key: str):
@@ -61,7 +69,9 @@ class RedisService:
                 return None
             return self.client.get(key)
         except Exception as e:
-            log_warn("Redis get failed", None, {"component": "RedisService", "error": str(e)})
+            log_warn(
+                "Redis get failed", None, {"component": "RedisService", "error": str(e)}
+            )
             return None
 
     def safe_set(self, key: str, value, ex: int = None):
@@ -71,4 +81,6 @@ class RedisService:
                 return
             self.client.set(key, value, ex=ex)
         except Exception as e:
-            log_warn("Redis set failed", None, {"component": "RedisService", "error": str(e)})
+            log_warn(
+                "Redis set failed", None, {"component": "RedisService", "error": str(e)}
+            )
