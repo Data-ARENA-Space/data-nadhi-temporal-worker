@@ -34,7 +34,16 @@ class DestinationWorkflow:
             exc_type, exc_message, exc_stack = extract_exception_details(exc)
             return await workflow.execute_activity(
                 "log_failure",
-                args=(exc_type, exc_message, exc_stack, exc_message, ctx, input, None),
+                args=(
+                    exc_type,
+                    exc_message,
+                    exc_stack,
+                    exc_message,
+                    ctx,
+                    input,
+                    None,
+                    "DestinationWorkflow-fetch_integration_target",
+                ),
                 schedule_to_close_timeout=timedelta(minutes=2),
             )
 
@@ -56,7 +65,16 @@ class DestinationWorkflow:
             exc_type, exc_message, exc_stack = extract_exception_details(exc)
             return await workflow.execute_activity(
                 "log_failure",
-                args=(exc_type, exc_message, exc_stack, exc_message, ctx, input, None),
+                args=(
+                    exc_type,
+                    exc_message,
+                    exc_stack,
+                    exc_message,
+                    ctx,
+                    input,
+                    None,
+                    "DestinationWorkflow-fetch_integration_connector",
+                ),
                 schedule_to_close_timeout=timedelta(minutes=2),
             )
 
@@ -72,7 +90,16 @@ class DestinationWorkflow:
             exc_type, exc_message, exc_stack = extract_exception_details(exc)
             return await workflow.execute_activity(
                 "log_failure",
-                args=(exc_type, exc_message, exc_stack, exc_message, ctx, input, None),
+                args=(
+                    exc_type,
+                    exc_message,
+                    exc_stack,
+                    exc_message,
+                    ctx,
+                    input,
+                    None,
+                    "DestinationWorkflow-send_to_destination",
+                ),
                 schedule_to_close_timeout=timedelta(minutes=2),
             )
 

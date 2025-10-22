@@ -50,7 +50,16 @@ class MainWorkflow:
             exc_type, exc_message, exc_stack = extract_exception_details(exc)
             return await workflow.execute_activity(
                 "log_failure",
-                args=(exc_type, exc_message, exc_stack, exc_message, ctx, None, None),
+                args=(
+                    exc_type,
+                    exc_message,
+                    exc_stack,
+                    exc_message,
+                    ctx,
+                    None,
+                    None,
+                    "MainWorkflow-fetch_pipeline_config",
+                ),
                 schedule_to_close_timeout=timedelta(minutes=2),
             )
 
@@ -73,7 +82,16 @@ class MainWorkflow:
             exc_type, exc_message, exc_stack = extract_exception_details(exc)
             return await workflow.execute_activity(
                 "log_failure",
-                args=(exc_type, exc_message, exc_stack, exc_message, ctx, None, None),
+                args=(
+                    exc_type,
+                    exc_message,
+                    exc_stack,
+                    exc_message,
+                    ctx,
+                    None,
+                    None,
+                    "MainWorkflow-fetch_workflow_config",
+                ),
                 schedule_to_close_timeout=timedelta(minutes=2),
             )
 

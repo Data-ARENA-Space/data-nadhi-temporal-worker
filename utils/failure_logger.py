@@ -70,7 +70,8 @@ async def log_failure(
     description: str,
     ctx: dict[str, Any],
     current_input: Any = None,
-    extra_context: dict[str, Any] | None = None
+    extra_context: dict[str, Any] | None = None,
+    activity_name: str = "unknown"
 ) -> dict[str, Any]:
     """
     Activity to log failure data to MinIO and return failure response.
@@ -83,6 +84,7 @@ async def log_failure(
         ctx: Context dict containing organisationId, projectId, pipelineId, messageId
         current_input: The current input data being processed (if different from original)
         extra_context: Additional context to include in the failure log
+        activity_name: Name of the workflow and activity (e.g. "TransformationWorkflow-transform")
 
     Returns:
         Failure response dict with success=False, reason, and error details
@@ -122,7 +124,9 @@ async def log_failure(
     if org_id and project_id and pipeline_id and message_id:
         try:
             minio = MinioService()
-            object_path = f"{org_id}/{project_id}/{pipeline_id}/{message_id}.json"
+            # Use messageId as folder and activity_name-timestamp as filename
+            timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+            object_path = f"{org_id}/{project_id}/{pipeline_id}/{message_id}/{activity_name}-{timestamp}.json"
             success = minio.upload_json(object_path, failure_data)
 
             if success:

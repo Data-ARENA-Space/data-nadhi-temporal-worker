@@ -12,7 +12,7 @@ from utils.workflow_utils import extract_exception_details
 class TransformationWorkflow:
     def __init__(self):
         self.queue = []
-        self.node_outputs = {}
+        self.node_outputs = {}  # Will store arrays of outputs per node
 
     @workflow.run
     async def traverse_workflow(
@@ -47,7 +47,7 @@ class TransformationWorkflow:
                     )
                     next_nodes, final_data = result
                 except (ApplicationError, ActivityError) as exc:
-                    # Log failure and return error response
+                    # Log failure but continue processing other nodes
                     exc_type, exc_message, exc_stack = extract_exception_details(exc)
                     final_data = await workflow.execute_activity(
                         "log_failure",
@@ -59,6 +59,7 @@ class TransformationWorkflow:
                             ctx,
                             current_data,
                             None,
+                            "TransformationWorkflow-transform",
                         ),
                         schedule_to_close_timeout=timedelta(minutes=2),
                     )
@@ -72,7 +73,7 @@ class TransformationWorkflow:
                     )
                     next_nodes, final_data = result
                 except (ApplicationError, ActivityError) as exc:
-                    # Log failure and return error response
+                    # Log failure but continue processing other nodes
                     exc_type, exc_message, exc_stack = extract_exception_details(exc)
                     final_data = await workflow.execute_activity(
                         "log_failure",
@@ -84,6 +85,7 @@ class TransformationWorkflow:
                             ctx,
                             current_data,
                             None,
+                            "TransformationWorkflow-filters",
                         ),
                         schedule_to_close_timeout=timedelta(minutes=2),
                     )
@@ -98,6 +100,9 @@ class TransformationWorkflow:
             for nd in next_nodes:
                 self.queue.append({"node_id": nd, "data": final_data})
 
-            self.node_outputs[current_node_id] = final_data
+            # Store multiple outputs per node as array
+            if current_node_id not in self.node_outputs:
+                self.node_outputs[current_node_id] = []
+            self.node_outputs[current_node_id].append(final_data)
 
         return {"success": True, "node_outputs": self.node_outputs}
